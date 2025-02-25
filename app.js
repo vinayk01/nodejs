@@ -9,40 +9,48 @@ const port = 3000;
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(session({
     secret: 'secret-key',
     resave: false,
     saveUninitialized: true
 }));
 
-// Database connection
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root', // change to your MySQL user
-    password: 'new_password', // change to your MySQL password
-    database: 'loginDB' // use your database name
+// Database connection using a pool (better for handling errors)
+const db = mysql.createPool({
+    connectionLimit: 10,
+    host: '10.0.1.21', // Use this instead of 'localhost' if MySQL is on the host machine
+    user: 'root',
+    password: 'new_password',
+    database: 'loginDB'
 });
 
-db.connect((err) => {
+// Check database connection
+db.getConnection((err, connection) => {
     if (err) {
-        console.log('Database connection error:', err);
+        console.error('Database connection error:', err);
     } else {
         console.log('Connected to MySQL database');
+        connection.release();
     }
 });
 
 // Routes
 app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/login.html'); // Serve the login form
+    res.sendFile(__dirname + '/login.html');
 });
 
 app.post('/login', (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Username and password are required');
+    }
 
     const query = 'SELECT * FROM users WHERE username = ?';
     db.query(query, [username], (err, result) => {
         if (err) {
+            console.error('Database query error:', err);
             return res.status(500).send('Error querying database');
         }
 
@@ -53,6 +61,10 @@ app.post('/login', (req, res) => {
         const user = result[0];
 
         bcrypt.compare(password, user.password, (err, isMatch) => {
+            if (err) {
+                return res.status(500).send('Error checking password');
+            }
+
             if (isMatch) {
                 req.session.username = user.username;
                 return res.send('Login successful');
@@ -73,17 +85,25 @@ app.get('/dashboard', (req, res) => {
 
 // Registration route
 app.post('/register', (req, res) => {
-    const username = req.body.username;
-    const password = req.body.password;
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Username and password are required');
+    }
 
     bcrypt.hash(password, 10, (err, hash) => {
         if (err) {
+            console.error('Error hashing password:', err);
             return res.status(500).send('Error hashing password');
         }
 
         const query = 'INSERT INTO users (username, password) VALUES (?, ?)';
         db.query(query, [username, hash], (err, result) => {
             if (err) {
+                if (err.code === 'ER_DUP_ENTRY') {
+                    return res.status(400).send('Username already exists');
+                }
+                console.error('Error inserting user into database:', err);
                 return res.status(500).send('Error inserting user into database');
             }
 
@@ -96,4 +116,3 @@ app.post('/register', (req, res) => {
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
-
