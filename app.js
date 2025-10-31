@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 
 const app = express();
-const port = 5000;
+const port = 6000;
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -28,7 +28,7 @@ const db = mysql.createPool({
 // Check database connection
 db.getConnection((err, connection) => {
     if (err) {
-        console.error('Database connection error:', err);
+        console.error('Database  extra connection error:', err);
     } else {
         console.log('Connected to MySQL database');
         connection.release();
