@@ -1,20 +1,19 @@
-FROM node:14
+# Use a lightweight Node.js base image
+FROM node:14-alpine
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copy dependency files and install dependencies (cached if unchanged)
 COPY package*.json ./
-
-# Install the application dependencies
-RUN npm install
+RUN npm install --production
 
 # Copy the rest of the application
 COPY . .
 
-# Expose port 3000 for the application
+# Expose application port
 EXPOSE 3000
 
-# Command to run the application
+# Start the app
 CMD ["node", "app.js"]
 
