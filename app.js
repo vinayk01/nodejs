@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const session = require('express-session');
 
 const app = express();
-const port = 5000;
+const port = 9000;
 
 // Middleware
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -19,7 +19,7 @@ app.use(session({
 // Database connection using a pool (better for handling errors)
 const db = mysql.createPool({
     connectionLimit: 10,
-    host: 'logindb.cluster-c5mq0yy40xyg.eu-north-1.rds.amazonaws.com', // Use this instead of 'localhost' if MySQL is on the host machine
+    host: '10.0.3.243', // Use this instead of 'localhost' if MySQL is on the host machine
     user: 'root',
     password: 'new_password',
     database: 'loginDB'
