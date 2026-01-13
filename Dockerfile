@@ -1,20 +1,20 @@
-FROM node:14
+FROM node:20-alpine
 
-# Set the working directory inside the container
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copy dependency manifests first for better build caching
 COPY package*.json ./
 
-# Install the application dependencies
-RUN npm install
+# Install dependencies
+RUN npm install --production
 
-# Copy the rest of the application
+# Copy source code
 COPY . .
 
-# Expose port 3000 for the application
+# Expose application port (update to match your app)
 EXPOSE 9000
 
-# Command to run the application
+# Run the application
 CMD ["node", "app.js"]
 

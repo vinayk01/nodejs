@@ -19,7 +19,7 @@ app.use(session({
 // Database connection using a pool (better for handling errors)
 const db = mysql.createPool({
     connectionLimit: 10,
-    host: '10.0.2.93', // Use this instead of 'localhost' if MySQL is on the host machine
+    host: '10.0.11.215', // Use this instead of 'localhost' if MySQL is on the host machine
     user: 'root',
     password: 'new_password',
     database: 'loginDB'
