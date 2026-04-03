@@ -191,3 +191,32 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
 });
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+
+const app = express();
+
+// Storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // folder must exist
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ storage: storage });
+
+// Serve uploaded files
+app.use('/uploads', express.static('uploads'));
+
+// Upload route
+app.post('/upload', upload.single('myfile'), (req, res) => {
+  if (!req.file) {
+    return res.send('No file uploaded');
+  }
+
+  res.send(`File uploaded successfully: ${req.file.filename}`);
+});
