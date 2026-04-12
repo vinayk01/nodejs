@@ -90,7 +90,7 @@ app.post('/login', (req, res) => {
             if (err) return res.status(500).send('Error checking password');
             if (isMatch) {
                 req.session.username = result[0].username;
-                return res.send('Login successful');
+                return res.send('Login this is third commit added successful');
             }
             return res.status(400).send('Incorrect password');
         });
