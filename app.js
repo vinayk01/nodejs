@@ -66,7 +66,7 @@ const db = mysql.createPool({
 
 db.getConnection((err, connection) => {
     if (err) {
-        console.error('Database connection error:', err);
+        console.error('Database this is extra adding for new commit connection error:', err);
     } else {
         console.log('Connected to MySQL database');
         connection.release();
