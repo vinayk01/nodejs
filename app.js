@@ -68,7 +68,7 @@ db.getConnection((err, connection) => {
     if (err) {
         console.error('Database this is extra adding for new commit connection error:', err);
     } else {
-        console.log('Connected to MySQL database');
+        console.log('Connected extra added second time to MySQL database');
         connection.release();
     }
 });
