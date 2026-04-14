@@ -1,4 +1,4 @@
-name: CI-CD Node App to ECR
+name: Deploy NodeJS App
 
 on:
   push:
@@ -18,10 +18,10 @@ jobs:
     steps:
 
     # 1. Checkout code
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Configure AWS
+    # 2. Configure AWS credentials (optional unless using AWS services)
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -29,47 +29,15 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 3. Login to ECR
-    - name: Login to ECR
-      run: |
-        aws ecr get-login-password --region $AWS_REGION | \
-        docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-
-    # 4. Build Docker image
-    - name: Build Image
-      run: |
-        docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
-
-    # 5. Tag Image
-    - name: Tag Image
-      run: |
-        docker tag $ECR_REPOSITORY:$IMAGE_TAG \
-        $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-
-    # 6. Push to ECR
-    - name: Push Image
-      run: |
-        docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
-
-    # 7. Deploy to EC2 via SSH
-    - name: Deploy to Server
+    # 3. Deploy to EC2 via SSH
+    - name: Deploy to Server via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_IP }}
-        username: ubuntu
+        username: root
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          IMAGE=225823724185.dkr.ecr.us-east-1.amazonaws.com/repo:latest
-
-          echo "Pull latest image"
-          docker pull $IMAGE
-
-          echo "Stop old container"
-          docker stop node-app || true
-          docker rm node-app || true
-
-          echo "Run new container"
-          docker run -d -p 9000:9000 \
-          --name node-app \
-          --restart unless-stopped \
-          $IMAGE
+          cd /opt/nodejs
+          git pull origin main
+          npm install
+          pm2 restart all
