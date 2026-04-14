@@ -1,4 +1,4 @@
-name: Deploy NodeJS App
+name: Build and Push Docker Image to ECR
 
 on:
   push:
@@ -12,7 +12,7 @@ env:
   IMAGE_TAG: latest
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,7 +21,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Configure AWS credentials (optional unless using AWS services)
+    # 2. Configure AWS credentials
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -29,15 +29,22 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 3. Deploy to EC2 via SSH
-    - name: Deploy to Server via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SERVER_IP }}
-        username: root
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          cd /opt/nodejs
-          git pull origin main
-          npm install
-          pm2 restart all
+    # 3. Login to Amazon ECR
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
+
+    # 4. Build Docker image
+    - name: Build Docker image
+      run: |
+        docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+
+    # 5. Tag Docker image
+    - name: Tag Docker image
+      run: |
+        docker tag $ECR_REPOSITORY:$IMAGE_TAG \
+        $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
+
+    # 6. Push to ECR
+    - name: Push Docker image to ECR
+      run: |
+        docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:$IMAGE_TAG
