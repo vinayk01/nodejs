@@ -45,7 +45,7 @@ const fileFilter = (req, file, cb) => {
     if (extname || mimetype) {
         cb(null, true);
     } else {
-        cb(new Error('Only jpg, jpeg, png, pdf, txt files are allowed'));
+        cb(new Error('Only jpg, jpeg, png, pdf, txt files are allowed extr added'));
     }
 };
 
@@ -58,7 +58,7 @@ const upload = multer({
 // Database connection
 const db = mysql.createPool({
     connectionLimit: 10,
-    host: process.env.DB_HOST || '10.0.1.44',
+    host: process.env.DB_HOST || '10.0.1.41',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'new_password',
     database: process.env.DB_NAME || 'loginDB'
