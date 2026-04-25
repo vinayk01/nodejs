@@ -2,27 +2,20 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    image: 192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:latest
+    container_name: nodejs-app
+    restart: always
     ports:
       - "9000:9000"
     environment:
-      DB_HOST: mysql
+      DB_HOST: 10.0.1.41
       DB_USER: root
       DB_PASSWORD: new_password
       DB_NAME: loginDB
     depends_on:
       - mysql
+    networks:
+      - app-network
 
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: new_password
-      MYSQL_DATABASE: loginDB
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-
-volumes:
-  mysql_data:
+networks:
+  app-network:

@@ -1,80 +1,25 @@
-pipeline {
-    agent any
+name: Deploy NodeJS Application to Hostinger
 
-    tools { 
-        nodejs "nodejs" 
-    }
+on:
+  push:
+    branches:
+      - main
 
-    environment {
-        AWS_REGION = 'us-east-1'
-        ACCOUNT_ID = 'AKIASZUOFTEZZ67DFZCB'
-        ECR_REPO = 'nodejs-app'
-        IMAGE_TAG = "latest"
-        IMAGE_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
-        NODE_ENV = 'production'
-    }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-    stages {
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-        stage('Checkout Code') {
-            steps {
-                git url: 'https://github.com/vinayk01/nodejs.git', branch: 'main'
-                sh 'ls -la'
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh """
-                docker build -t ${ECR_REPO}:${IMAGE_TAG} .
-                """
-            }
-        }
-
-        stage('Tag Docker Image') {
-            steps {
-                sh """
-                docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
-                """
-            }
-        }
-
-        stage('Login to ECR') {
-            steps {
-                sh '''
-                   /usr/local/bin/aws ecr get-login-password --region us-east-1 \
-                   | docker login --username AWS --password-stdin 192497948979.dkr.ecr.us-east-1.amazonaws.com
-                    '''
-            }
-        }
-
-        stage('Push to ECR') {
-            steps {
-                sh """
-                docker push ${IMAGE_URI}
-                """
-            }
-        }
-
-    }
-
-    post {
-        always {
-            echo 'Pipeline executed'
-        }
-        success {
-            echo 'Docker image pushed successfully to ECR'
-        }
-        failure {
-            echo 'Pipeline failed'
-        }
-    }
-    
-}
-
+      - name: Deploy Via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: root
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /opt/nodejs
+            git pull
+            docker compose up -d --build

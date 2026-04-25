@@ -45,7 +45,7 @@ const fileFilter = (req, file, cb) => {
     if (extname || mimetype) {
         cb(null, true);
     } else {
-        cb(new Error('Only jpg, jpeg, png, pdf, txt files are allowed extr added'));
+        cb(new Error('Only jpg, jpeg, png, pdf, txt files are allowed'));
     }
 };
 
