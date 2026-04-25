@@ -66,7 +66,7 @@ const db = mysql.createPool({
 
 db.getConnection((err, connection) => {
     if (err) {
-        console.error('Database this is extra adding for new commit connection error:', err);
+        console.error('Database this is extra adding for new commit connection error extra:', err);
     } else {
         console.log('Connected extra added second time to MySQL database');
         connection.release();

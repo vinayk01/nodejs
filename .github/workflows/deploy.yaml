@@ -1,25 +1,80 @@
-name: Test AWS Secrets
+pipeline {
+    agent any
 
-on:
-  workflow_dispatch:   # manual trigger
+    tools { 
+        nodejs "nodejs" 
+    }
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
+    environment {
+        AWS_REGION = 'us-east-1'
+        ACCOUNT_ID = 'AKIASZUOFTEZZ67DFZCB'
+        ECR_REPO = 'nodejs-app'
+        IMAGE_TAG = "latest"
+        IMAGE_URI = "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO}:${IMAGE_TAG}"
+        NODE_ENV = 'production'
+    }
 
-    steps:
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+    stages {
 
-    - name: Verify AWS identity
-      run: aws sts get-caller-identity
+        stage('Checkout Code') {
+            steps {
+                git url: 'https://github.com/vinayk01/nodejs.git', branch: 'main'
+                sh 'ls -la'
+            }
+        }
 
-    - name: Login to ECR
-      uses: aws-actions/amazon-ecr-login@v2
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
+        }
 
-    - name: List ECR repositories
-      run: aws ecr describe-repositories
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build -t ${ECR_REPO}:${IMAGE_TAG} .
+                """
+            }
+        }
+
+        stage('Tag Docker Image') {
+            steps {
+                sh """
+                docker tag ${ECR_REPO}:${IMAGE_TAG} ${IMAGE_URI}
+                """
+            }
+        }
+
+        stage('Login to ECR') {
+            steps {
+                sh '''
+                   /usr/local/bin/aws ecr get-login-password --region us-east-1 \
+                   | docker login --username AWS --password-stdin 192497948979.dkr.ecr.us-east-1.amazonaws.com
+                    '''
+            }
+        }
+
+        stage('Push to ECR') {
+            steps {
+                sh """
+                docker push ${IMAGE_URI}
+                """
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo 'Pipeline executed'
+        }
+        success {
+            echo 'Docker image pushed successfully to ECR'
+        }
+        failure {
+            echo 'Pipeline failed'
+        }
+    }
+    
+}
+
