@@ -58,7 +58,7 @@ const upload = multer({
 // Database connection
 const db = mysql.createPool({
     connectionLimit: 10,
-    host: process.env.DB_HOST || '10.0.1.41',
+    host: process.env.DB_HOST || '10.0.1.57',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'new_password',
     database: process.env.DB_NAME || 'loginDB'
