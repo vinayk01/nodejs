@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - main
+      - dev
+      - qa
+      - prod
 
 env:
   AWS_REGION: us-east-1
   ECR_REGISTRY: 192497948979.dkr.ecr.us-east-1.amazonaws.com
   ECR_REPOSITORY: nodejs-app
-  CONTAINER_NAME: nodejs-app
 
 jobs:
   deploy:
@@ -18,6 +20,25 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Set Environment Variables
+        run: |
+          if [ "${{ github.ref_name }}" == "main" ]; then
+            echo "ENV=prod" >> $GITHUB_ENV
+            echo "SSH_HOST=${{ secrets.SSH_HOST_PROD }}" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=nodejs-app-prod" >> $GITHUB_ENV
+            echo "APP_PORT=9000" >> $GITHUB_ENV
+          elif [ "${{ github.ref_name }}" == "qa" ]; then
+            echo "ENV=qa" >> $GITHUB_ENV
+            echo "SSH_HOST=${{ secrets.SSH_HOST_QA }}" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=nodejs-app-qa" >> $GITHUB_ENV
+            echo "APP_PORT=9001" >> $GITHUB_ENV
+          elif [ "${{ github.ref_name }}" == "dev" ]; then
+            echo "ENV=dev" >> $GITHUB_ENV
+            echo "SSH_HOST=${{ secrets.SSH_HOST_DEV }}" >> $GITHUB_ENV
+            echo "CONTAINER_NAME=nodejs-app-dev" >> $GITHUB_ENV
+            echo "APP_PORT=9002" >> $GITHUB_ENV
+          fi
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -31,24 +52,25 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} .
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-${{ github.sha }} .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-${{ github.sha }} $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-${{ github.sha }}
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-latest
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: ${{ secrets.SSH_HOST }}
+          host: ${{ env.SSH_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
+          envs: ECR_REGISTRY,ECR_REPOSITORY,CONTAINER_NAME,APP_PORT,AWS_REGION
           script: |
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 192497948979.dkr.ecr.us-east-1.amazonaws.com
-            docker pull 192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:latest
-            docker stop nodejs-app || true
-            docker rm nodejs-app || true
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+            docker pull $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-latest
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
             docker run -d \
-              --name nodejs-app \
-              -p 9000:9000 \
-              192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:latest
+              --name $CONTAINER_NAME \
+              -p $APP_PORT:9000 \
+              $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-latest
 
