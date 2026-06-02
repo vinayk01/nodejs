@@ -48,7 +48,7 @@ jobs:
             docker stop nodejs-app || true
             docker rm nodejs-app || true
             docker run -d \
-              --name nodejs-app \
-              -p 9000:9000 \
-              192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:latest
+            --name $CONTAINER_NAME \
+            -p 9000:9000 \
+            $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-latest
 
