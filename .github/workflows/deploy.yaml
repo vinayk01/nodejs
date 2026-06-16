@@ -44,11 +44,11 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 192497948979.dkr.ecr.us-east-1.amazonaws.com
-            docker pull 192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:latest
+            docker pull 192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:${{ github.ref_name }}-latest
             docker stop nodejs-app || true
             docker rm nodejs-app || true
             docker run -d \
-            --name $CONTAINER_NAME \
-            -p 9000:9000 \
-            $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.ref_name }}-latest
+              --name nodejs-app \
+              -p 9000:9000 \
+              192497948979.dkr.ecr.us-east-1.amazonaws.com/nodejs-app:${{ github.ref_name }}-latest
 
