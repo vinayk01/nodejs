@@ -6,7 +6,6 @@ const session = require('express-session');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const promClient = require('prom-client');
 
 const app = express();
 const port = 9000;
