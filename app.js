@@ -84,15 +84,6 @@ app.post('/register', (req, res) => {
     });
 });
 
-app.post('/upload', upload.single('myfile'), (req, res) => {
-    if (!req.session.username) return res.status(401).send('Please log in first.');
-    if (!req.file) return res.status(400).send('No file uploaded');
-    res.send(`
-        <h3>File uploaded successfully</h3>
-        <p>File name: ${req.file.filename}</p>
-        <p><a href="/uploads/${req.file.filename}" target="_blank">View File</a></p>
-    `);
-});
 
 app.use((err, req, res, next) => {
     if (err) return res.status(400).send(err.message);
