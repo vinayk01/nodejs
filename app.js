@@ -4,18 +4,10 @@ const mysql = require('mysql');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const port = 9000;
-
-const uploadDir = path.join(__dirname, 'uploads');
-
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-}
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
@@ -26,66 +18,64 @@ app.use(session({
     saveUninitialized: true
 }));
 
-app.use('/uploads', express.static(uploadDir));
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 5 * 1024 * 1024
-    }
-});
-
-const db = mysql.createPool({
-    connectionLimit: 10,
+const db = mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'new_password',
     database: process.env.DB_NAME || 'loginDB'
 });
 
-db.getConnection((err, connection) => {
+db.connect((err) => {
     if (err) {
-        console.error('Database connection failed:', err);
-    } else {
-        console.log('Connected to MySQL');
-        connection.release();
+        console.error('MySQL Connection Failed:', err);
+        return;
     }
+    console.log('Connected to MySQL');
 });
 
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'login.html'));
+    res.send(`
+        <html>
+        <body>
+            <h2>Login</h2>
+
+            <form action="/login" method="POST">
+                <input type="text" name="username" placeholder="Username" required><br><br>
+                <input type="password" name="password" placeholder="Password" required><br><br>
+                <button type="submit">Login</button>
+            </form>
+
+            <hr>
+
+            <h2>Register</h2>
+
+            <form action="/register" method="POST">
+                <input type="text" name="username" placeholder="Username" required><br><br>
+                <input type="password" name="password" placeholder="Password" required><br><br>
+                <button type="submit">Register</button>
+            </form>
+        </body>
+        </html>
+    `);
 });
 
 app.post('/register', (req, res) => {
     const { username, password } = req.body;
 
-    if (!username || !password) {
-        return res.status(400).send('Username and password are required');
-    }
-
     bcrypt.hash(password, 10, (err, hash) => {
         if (err) {
-            return res.status(500).send('Password hash error');
+            return res.status(500).send('Password hash failed');
         }
 
         db.query(
-            'INSERT INTO users (username, password) VALUES (?, ?)',
+            'INSERT INTO users(username,password) VALUES (?,?)',
             [username, hash],
             (err) => {
                 if (err) {
                     return res.status(500).send(err.message);
                 }
 
-                res.send('User registered successfully');
+                res.send('User Registered Successfully');
             }
         );
     });
@@ -95,73 +85,42 @@ app.post('/login', (req, res) => {
     const { username, password } = req.body;
 
     db.query(
-        'SELECT * FROM users WHERE username = ?',
+        'SELECT * FROM users WHERE username=?',
         [username],
-        (err, results) => {
+        (err, result) => {
+
             if (err) {
-                return res.status(500).send('Database error');
+                return res.status(500).send('Database Error');
             }
 
-            if (results.length === 0) {
-                return res.status(401).send('Invalid username');
+            if (result.length === 0) {
+                return res.status(401).send('User Not Found');
             }
 
-            bcrypt.compare(password, results[0].password, (err, match) => {
-                if (err) {
-                    return res.status(500).send('Password validation error');
-                }
+            bcrypt.compare(password, result[0].password, (err, match) => {
 
                 if (match) {
                     req.session.username = username;
                     return res.redirect('/dashboard');
                 }
 
-                return res.status(401).send('Invalid password');
+                return res.status(401).send('Invalid Password');
             });
         }
     );
 });
 
 app.get('/dashboard', (req, res) => {
+
     if (!req.session.username) {
-        return res.status(401).send('Please login first');
+        return res.redirect('/');
     }
 
     res.send(`
         <html>
         <body>
-            <h2>Welcome ${req.session.username}</h2>
-
-            <form action="/upload" method="post" enctype="multipart/form-data">
-                <input type="file" name="myfile" required />
-                <button type="submit">Upload</button>
-            </form>
-
-            <br>
-
+            <h1>Welcome ${req.session.username}</h1>
             <a href="/logout">Logout</a>
-        </body>
-        </html>
-    `);
-});
-
-app.post('/upload', upload.single('myfile'), (req, res) => {
-    if (!req.session.username) {
-        return res.status(401).send('Please login first');
-    }
-
-    if (!req.file) {
-        return res.status(400).send('No file uploaded');
-    }
-
-    res.send(`
-        <html>
-        <body>
-            <h3>File uploaded successfully</h3>
-            <p>File Name: ${req.file.filename}</p>
-            <a href="/uploads/${req.file.filename}" target="_blank">View File</a>
-            <br><br>
-            <a href="/dashboard">Back to Dashboard</a>
         </body>
         </html>
     `);
@@ -174,7 +133,7 @@ app.get('/logout', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+    console.log('Server running on port ' + port);
 });
 ```
 
