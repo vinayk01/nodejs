@@ -61,7 +61,7 @@ jobs:
       - name: Verify Deployment
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: ${{ secrets.SSH_HOST_DEV }}
+          host: ${{ secrets.SSH_HOST }}
           username: ubuntu
           key: ${{ secrets.SSH_KEY }}
           script: |
