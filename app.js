@@ -46,7 +46,7 @@ const upload = multer({
 
 const db = mysql.createPool({
     connectionLimit: 10,
-    host: process.env.DB_HOST || '10.0.1.161',
+    host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'new_password',
     database: process.env.DB_NAME || 'loginDB'
@@ -67,6 +67,10 @@ app.get('/', (req, res) => {
 
 app.post('/register', (req, res) => {
     const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).send('Username and password are required');
+    }
 
     bcrypt.hash(password, 10, (err, hash) => {
         if (err) {
@@ -103,12 +107,16 @@ app.post('/login', (req, res) => {
             }
 
             bcrypt.compare(password, results[0].password, (err, match) => {
+                if (err) {
+                    return res.status(500).send('Password validation error');
+                }
+
                 if (match) {
                     req.session.username = username;
-                    res.send('Login successful');
-                } else {
-                    res.status(401).send('Invalid password');
+                    return res.redirect('/dashboard');
                 }
+
+                return res.status(401).send('Invalid password');
             });
         }
     );
@@ -120,12 +128,20 @@ app.get('/dashboard', (req, res) => {
     }
 
     res.send(`
-        <h2>Welcome ${req.session.username}</h2>
+        <html>
+        <body>
+            <h2>Welcome ${req.session.username}</h2>
 
-        <form action="/upload" method="post" enctype="multipart/form-data">
-            <input type="file" name="myfile" required />
-            <button type="submit">Upload</button>
-        </form>
+            <form action="/upload" method="post" enctype="multipart/form-data">
+                <input type="file" name="myfile" required />
+                <button type="submit">Upload</button>
+            </form>
+
+            <br>
+
+            <a href="/logout">Logout</a>
+        </body>
+        </html>
     `);
 });
 
@@ -139,12 +155,22 @@ app.post('/upload', upload.single('myfile'), (req, res) => {
     }
 
     res.send(`
-        <h3>File uploaded successfully</h3>
-        <p>${req.file.filename}</p>
-        <a href="/uploads/${req.file.filename}" target="_blank">
-            View File
-        </a>
+        <html>
+        <body>
+            <h3>File uploaded successfully</h3>
+            <p>File Name: ${req.file.filename}</p>
+            <a href="/uploads/${req.file.filename}" target="_blank">View File</a>
+            <br><br>
+            <a href="/dashboard">Back to Dashboard</a>
+        </body>
+        </html>
     `);
+});
+
+app.get('/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.redirect('/');
+    });
 });
 
 app.listen(port, () => {
